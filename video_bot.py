@@ -14,6 +14,7 @@ Leave it running while you work.
 """
 
 import asyncio
+import base64
 import os
 import sys
 import tempfile
@@ -24,6 +25,28 @@ from dotenv import load_dotenv
 
 SCRIPT_DIR = Path(__file__).parent
 load_dotenv(dotenv_path=SCRIPT_DIR / ".env", override=True)
+
+
+# ─── Restore secret files from base64 env vars (for cloud hosting) ────────────
+
+def _restore_from_b64(env_var: str, target_filename: str):
+    """If env_var is set, decode it and write to target_filename (if file doesn't exist)."""
+    target = SCRIPT_DIR / target_filename
+    if target.exists():
+        return  # keep local file if already present
+    b64 = os.getenv(env_var)
+    if not b64:
+        return
+    try:
+        target.write_bytes(base64.b64decode(b64))
+        print(f"[Bot] Restored {target_filename} from {env_var}")
+    except Exception as e:
+        print(f"[Bot] Failed to restore {target_filename}: {e}")
+
+
+_restore_from_b64("OAUTH_CREDENTIALS_B64", "oauth_credentials.json")
+_restore_from_b64("TOKEN_B64", "token.json")
+
 
 # Existing Drive pipeline
 from new_video import run as create_video_setup
